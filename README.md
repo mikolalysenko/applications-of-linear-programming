@@ -309,12 +309,17 @@ s.t.
       b_0 + ... + b_m = 1
 ```
 
-
-
-
+Which is a quadratic program.
 
 #### Halfspace formulation
 
+```
+min   (x - y)^2
+
+s.t.
+      P (x - p_0) = 0
+      Q (y - q_0) = 0
+```
 
 ## Minimal enclosing sphere
 
