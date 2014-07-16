@@ -95,24 +95,28 @@ One of the most frequently encountered low level tasks in computational geometry
 
 These sorts of problems are ubiquitous in physics simulations (where it is usually lumped in with "collision detection"), computer graphics (for ray casting and clipping), and GIS systems. Because they are used so frequently, a lot of effort has been spent on optimizing these problems for special cases, like in this [table for instance](http://www.realtimerendering.com/intersections.html). Older texts like [Graphics Gems](http://tog.acm.org/resources/GraphicsGems/) have whole chapters devoted to solving special instances of these intersection problems. Taken independently, these techniques can seem a bit ad-hoc, however at a deeper level they are all closely related -- specifically they are all instances of quadratic programming.
 
-### Affine problem
+### Affine sets
 
-To understand how this works, we first study a version of this problem for [affine subspaces](http://en.wikipedia.org/wiki/Affine_space#Affine_subspaces). In general there are two ways that an affine set can be defined:
+To understand how this works, we first study a version of this problem for [affine subspaces](http://en.wikipedia.org/wiki/Affine_space#Affine_subspaces), like lines points, planes and so on. In general there are two ways that an affine set can be defined:
 
-* Primal form: As the image of an affine map,
-
-```
-S = p_0 + a_1 p_1 + .... a_n p_n
-```
-
-* Dual form: As the kernel of an affine map,
+* Primal form: As an affine combination of points
 
 ```
-    {     p_1 . (x - p_0) = 0   }       
-S = { x : p_2 . (x - p_0) = 0   }
+S = { p_0 + a_1 p_1 + .... a_n p_n : a_i is a real number }
+```
+
+Where `p_0` is a point and each `p_i` is a vector, and each `a_i` is some affine coefficient
+
+* Dual form: As an intersection of hyperplanes
+
+```
+    {     p_1^T (x - p_0) = 0   }       
+S = { x : p_2^T (x - p_0) = 0   }
     {          ...              }
-    {     p_n . (x - p_0) = 0   }
+    {     p_n^T (x - p_0) = 0   }
 ```
+
+Again `p_0` is a point and each `p_i` is a vector
 
 #### Primal formulation
 
@@ -131,20 +135,185 @@ d(S,T)^2 = min_{x in S, y in T}  |x - y|^2
 
 Algebraically, this is equivalent to solving the following linear least squares problem:
 
-
 ```
 min_{a_i,b_j} (p_0 + a_1 p_1 + ... + a_n p_n - q_0 - b_1 q_1 + ... b_m q_m)^2
 ```
 
+To simplify notation, let us define the auxiliary matrices:
+
+```
+     ( p_1^T )
+P =  ( p_2^T )
+     (  ...  )
+     ( p_n^T )
+
+
+     ( q_1^T )
+Q =  ( q_2^T )
+     (  ...  )
+     ( q_m^T )
+
+M  = ( P P^T   P Q^T )
+     ( Q P^T   Q Q^T )
+```
+
+And the vectors:
+
+
+```
+    ( a_1 )
+a = ( a_2 )
+    ( ... )
+    ( a_n )
+
+
+    ( b_1 )
+b = ( b_2 )
+    ( ... )
+    ( b_m )
+
+x = ( a )
+    ( b )
+
+c = ( P (p_0 - q_0) )
+    ( Q (p_0 - q_0) )
+```
+
+Then the above minimization problem can be rewritten as:
+
+```
+min   x^T M x - x^T c
+ x
+```
+
+Which is a linear least squares problem, and so the solution to `x` is:
+
+```
+M x = c
+```
+
+The interpretation of `x` is that it is the coordinates of the pair of closest points in `S` and `T` in barycentric coordinates.  If this solution is not unique, then the above equation will be rank deficient but still solvable, and the solution space will give the collection of pairs of closest points.  The two sets will intersect if and only if:
+
+```
+P^T a + p_0 = Q^T b + q_0
+```
+
 #### Dual formulation
 
+The story for the dual formulation is quite similar, though instead of solving for the coordinates of the closest pair of points in barycentric coordinates we will just directly compute the closest pair. In this version the two sets S and T will be determined by the *intersection* of a collection of hyperplanes:
 
 
-### Convex problem
+```
+    {     p_1^T (x - p_0) = 0   }       
+S = { x : p_2^T (x - p_0) = 0   }
+    {          ...              }
+    {     p_n^T (x - p_0) = 0   }
 
-#### Halfspace formulation
+
+    {     q_1^T (y - q_0) = 0   }       
+T = { y : q_2^T (y - q_0) = 0   }
+    {          ...              }
+    {     q_m^T (y - q_0) = 0   }
+```
+
+The closest pair of points is the solution to the following equation:
+
+```
+  min   |x - y|^2
+x in S
+y in T
+```
+
+Again, we will reintroduce the following matrices as we did in the primal case:
+
+```
+     ( p_1^T )
+P =  ( p_2^T )
+     (  ...  )
+     ( p_n^T )
+
+
+     ( q_1^T )
+Q =  ( q_2^T )
+     (  ...  )
+     ( q_m^T )
+```
+
+With this notation, we can define the vectors:
+
+```
+d = P p_0
+e = Q q_0
+```
+
+So the constraints on `x` and `y` can be written as:
+
+```
+P x - d = 0
+Q y - e = 0
+```
+
+Introducing Lagrange multipliers `s` and `u` for these constraints, the system can be written equivalently as:
+
+```
+min s^T (P x - d) + u^T (Q y - e) + (x - y)^T (x - y)
+```
+
+This gives the following system of constraints:
+
+```
+s^T P - u^T Q = 0
+      P x - d = 0
+      Q y - e = 0
+```
+
+### Convex sets
+
+The situation for convex sets is roughly analogous.  Again, the formulation of the problem is highly dependent on whether the polytopes are represented as intersections or combinations.  Specifically, for convex polytopes there are two basic ways they are encoded:
+
+* V-Polytopes: As a convex combination of vertices
+* H-Polytopes:  As an intersection of halfspaces
+
+Again these two representations are dual to one another, though the precise way the problem is formulated in each case is subtly different.
 
 #### Vertex formulation
+
+A V-polytope representation of a convex polytope is given by enumerating the vertices of the convex set.  Specifically, the polytope `S` is determined by a convex combination of vertices:
+
+```
+S = { a_0 p_0 + a_1 p_1 + ... + a_n p_n }
+```
+
+Where:
+
+```
+      0 <= a_i <= 1
+a_0 + a_1 + ... + a_n = 1
+```
+
+Following the conventions from the affine/primal case, we can again define `T` as:
+
+```
+T = { b_0 q_0 + b_1 q_1 + ... + b_m q_m }
+```
+
+So the distance between `S` and `T` is:
+
+```
+min  (a_0 p_0 + a_1 p_1 + ... + a_n p_n - b_0 q_0 - ... - b_m q_m)^2
+
+s.t.
+      0 <= a_i
+      0 <= b_j
+      a_0 + ... + a_n = 1
+      b_0 + ... + b_m = 1
+```
+
+
+
+
+
+#### Halfspace formulation
 
 
 ## Minimal enclosing sphere
