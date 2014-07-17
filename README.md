@@ -89,6 +89,31 @@ It is easy to see that quadratic programming generalizes linear programming, sin
 
 Again, it is intuitive that these fields will push any point in the feasible region towards a unique point, however unlike in linear programs this point is likely to be a vertex. In the context of computational geometry, it is not hard to adapt many algorithms to solve quadratic programs, and so we shall switch between these systems freely.
 
+
+### KKT conditions
+
+In optimization problems with equality constraints, Lagrange multipliers can be used to convert a constrained optimization problem into an unconstrained problem. A similar technique can be applied to optimization problems with inequality constraints, via a result known as the KKT theorem (short for Karush-Kuhn-Tucker).We will now state this result in the context of *quadratic programming* since it generalizes the case of linear programming/feasibility:
+
+#### KKT Theorem
+
+A feasible solution `x'` to a quadratic program,
+
+```
+Minimize:
+      x^T Q x + x^T c
+
+Such that:
+        A x = b
+         0 <= x
+```
+
+is optimal if and only if there exists an n-dimensional vector `l` and a d-dimensional vector `u >= 0` such that:
+
+```
+c^T + 2 x'^T Q = -l^T A + u^T
+        u^T x' = 0
+```
+
 ## Closest point and intersection problems
 
 One of the most frequently encountered low level tasks in computational geometry is to detect if two convex polytopes intersect, or if they are separated then to compute the clearance distance between them.
@@ -321,8 +346,60 @@ s.t.
       Q (y - q_0) = 0
 ```
 
-## Minimal enclosing sphere
+## Minimal enclosing ball
 
+Another common geometry problem is to find the smallest enclosing ball containing a collection of points.  That is, given a point set, `S = { p_1, p_2, ..., p_n }` in Euclidean space, we want to find a circle with center `p` and smallest radius `r` such that for each `p_i` in S,
+
+```
+(p_i - p)^2 <= r^2
+```
+
+Or equivalently, 
+
+```
+min  max   (p - p_k)^2
+ p   p_k
+```
+
+Now observe that the center of the minimal enclosing ball must reamin within the convex hull of the point set, so without loss of generality:
+
+```
+p = a_1 p_1 + ... + a_n p_n
+
+        0 <= a_i
+a_1 + a_2 + ... + a_n = 1
+```
+
+Define the matrix/vector pair:
+
+```
+     ( p_1^T )
+P =  ( p_2^T )
+     (  ...  )
+     ( p_n^T )
+
+    ( a_1 )
+a = ( a_2 )
+    ( ... )
+    ( a_n )
+```
+
+So,
+
+```
+p = P^T a
+```
+
+Then the following quadratic program can be used to solve the minimal enclosing ball problem:
+
+```
+Minimize:   a^T P P^T a - sum_i p_i^T p_i a_i
+
+Such that:
+
+        0 <= a_i
+        a_1 + a_2 + ... + a_n = 1
+```
 
 ## Algorithms
 
@@ -332,3 +409,4 @@ s.t.
 
 ### Clarkson's algorithm
 
+### Warm restarting
